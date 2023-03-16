@@ -1,0 +1,247 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! All hdslb configuration items and corresponding attributes are listed in this file.
+! The attributes including:
+!   * item type: <init> | <normal> default
+!   * item default value
+!   * item value range
+! Note that hdslb configuration file supports the following comment type:
+!   * line comment: using '#" or '!'
+!   * inline range comment: using '<' and '>', put comment in between
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! global config
+global_defs {
+    #daemon                             <disalbe>
+    log_level         INFO              <none>
+    log_file          /var/log/hdslb.log <none>
+    <init> log_async_mode    off        <off, on|off>
+}
+
+! netif config
+netif_defs {
+    <init> pktpool_size     2097151 <65535, 1023-134217728>
+    <init> pktpool_cache    256     <256, 32-8192>
+
+    <init> device dpdk0 {
+        rx {
+            #max_burst_size     32
+            queue_number        6           <16, 0-16>
+            descriptor_number   256         <256, 16-8192>
+            rss                 all         <all, all|ip|tcp|udp|sctp|ether|port|tunnel>
+        }
+        tx {
+            queue_number        6           <16, 0-16>
+            descriptor_number   512         <512, 16-8192>
+        }
+        fdir {
+            mode                perfect     <perfect, none|signature|perfect|perfect_mac_vlan|perfect_tunnel>
+            pballoc             64k         <64k, 64k|128k|256k>
+            status              matched     <matched, close|matched|always>
+        }
+    !    promisc_mode                       <disable>
+    !    kni_name               dpdk0.kni   <char[32]>
+    }
+
+    <init> device dpdk1 {
+        rx {
+            #max_burst_size     32
+            queue_number        4
+            descriptor_number   128
+            rss                 all
+        }
+        tx {
+            queue_number        4
+            descriptor_number   256
+        }
+    !    promisc_mode
+    !    kni_name               dpdk1.kni
+    }
+
+    <init> device bond0 {
+        mode                    4           <0-6>
+        slave                   dpdk0       <device name>
+        slave                   dpdk1       <device name>
+        primary                 dpdk0       <device name, use primary slave queue conf for bond>
+        kni_name                bond0.kni   <char[32]>
+    }
+}
+
+! worker config (lcores)
+worker_defs {
+    <init> worker cpu0 {
+        cpu_id  0
+        type    master
+    }
+
+    <init> worker cpu1 {
+        type    slave               <salve, master|slave>
+        cpu_id  1                   which cpu the worker thread runs on
+        port    dpdk0 {
+            rx_queue_ids     0 4        <0, 0-16, space separated list>
+            tx_queue_ids     0          <0, 0-16, space separated list>
+            isol_rx_cpu_ids  8 8        <cpu id, forbid isol_rx if invalid>
+            isol_rxq_ring_sz 1048576    <1048576, 1024-2147483648, for all queues>
+        }
+        port    dpdk1 {
+            rx_queue_ids     0
+            tx_queue_ids     0
+        }
+    }
+
+    <init> worker cpu2 {
+        type    slave
+        cpu_id  2
+        port    dpdk0 {
+            rx_queue_ids     1 5
+            tx_queue_ids     1
+        }
+        port    dpdk1 {
+            rx_queue_ids     1
+            tx_queue_ids     1
+        }
+    }
+
+    <init> worker cpu3 {
+        type        slave
+        cpu_id      3
+        port        dpdk0 {
+            rx_queue_ids     2
+            tx_queue_ids     2 4 5
+            isol_rx_cpu_ids  9 [invalid id] 10
+        }
+        port        dpdk1 {
+            rx_queue_ids     2
+            tx_queue_ids     2
+        }
+    }
+
+    <init> worker   cpu4 {
+        type        slave
+        cpu_id      4
+        port        dpdk0 {
+            rx_queue_ids     3
+            tx_queue_ids     3
+        }
+        port        dpdk1 {
+            rx_queue_ids     3
+            tx_queue_ids     3
+        }
+    }
+}
+
+! timer config
+timer_defs {
+    # time interval(us) to schedule dpdk timer management
+    schedule_interval    500            <10, 1-10000000>
+}
+
+! hdslb neighbor config
+neigh_defs {
+    <init> unres_queue_length  128      <128, 16-8192>
+    <init> timeout             60       <60, 1-3600>
+}
+
+! hdslb ipv4 config
+ipv4_defs {
+    forwarding                 off      <off, on/off>
+    <init> default_ttl         64       <64, 0-255>
+    fragment {
+        <init> bucket_number   4096     <4096, 32-65536>
+        <init> bucket_entries  16       <16, 1-256>
+        <init> max_entries     409600   <4096, 32-65536>
+        <init> ttl             1        <1, 1-255>
+    }
+}
+
+! hdslb ipv6 config
+ipv6_defs {
+    disable                 off         <off, on/off>
+    forwarding              off         <off, on/off>
+    route6 {
+        <init> method       "hlist"     <"hlist"/"lpm">
+        recycle_time        10          <10, 1-36000>
+        lpm {
+            <init> lpm6_max_rules       1024    <1024, 16-2147483647>
+            <init> lpm6_num_tbl8s       65536   <65536, 16-2147483647>
+            <init> rt6_array_size       65536   <65536, 16-2147483647>
+            <init> rt6_hash_bucket      256     <256, 2-2147483647>
+        }
+    }
+}
+
+! control plane config
+ctrl_defs {
+    lcore_msg {
+        #bucket_number   256
+        <init> ring_size                4096    <4096, 256-524288>
+        sync_msg_timeout_us             2000    <2000, 1-∞>
+        priority_level                  low     <low, low|norm|high|ign>
+    }
+    ipc_msg {
+        <init> unix_domain /var/run/hdslb_ctrl   </var/run/hdslb_ctrl, max chars: 256>
+    }
+}
+
+! ipvs config
+ipvs_defs {
+    conn {
+        <init> conn_pool_size       2097152     <2097152, 65536-∞>
+        <init> conn_pool_cache      256         <256, 1-∞>
+        conn_init_timeout           3           <3, 1-31535999>
+        expire_quiescent_template               <disable>
+        <init> fast_xmit_close                  <disable>
+        <init> redirect             off         <off/on: disable/enable packet redirect>
+    }
+
+    udp {
+        defence_udp_drop        <enable>
+        uoa_mode                opp   <opp for private protocol by default, or ipo for IP-option mode>
+        uoa_max_trail           3     <max trails for send UOA for a connection>
+        timeout {               <1-31535999>
+            normal      300     <300>
+            last        3       <3>
+        }
+    }
+
+    tcp {
+        defence_tcp_drop        <enable>
+        timeout {               <1-31535999>
+            none        3       <2>
+            established 91      <90>
+            syn_sent    4       <3>
+            syn_recv    31      <30>
+            fin_wait    8       <7>
+            time_wait   8       <7>
+            close       4       <3>
+            close_wait  8       <7>
+            last_ack    8       <7>
+            listen      121     <120>
+            synack      31      <30>
+            last        3       <2>
+        }
+        synproxy {
+            synack_options {
+                mss             1452        <1452, 1-65535>
+                ttl             63          <63, 1-255>
+                sack                        <enable>
+            !    wscale                      <disable>
+            !    timestamp                   <disable>
+            }
+            !defer_rs_syn                   <disable>
+            rs_syn_max_retry    3           <3, 1-99>
+            ack_storm_thresh    10          <10, 1-999>
+            max_ack_saved       3           <1, 63>
+            conn_reuse_state {
+                close                       <enable>
+                time_wait                   <enable>
+            !    fin_wait                    <disable>
+            !    close_wait                  <disable>
+            !    last_ack                    <disable>
+            }
+        }
+    }
+}
+
+sa_pool {
+    <init> pool_hash_size   16  <16, 1-128>
+}
