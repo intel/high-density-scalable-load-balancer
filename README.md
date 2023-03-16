@@ -27,7 +27,7 @@ Rough Performance data on recent Intel's Xeon CPU (e.g. 3rd & 4th generation) an
 
 * [Chinese: 火山引擎携手英特尔，基于 HDSLB 优化四层负载均衡性能](https://www.intel.cn/content/dam/www/central-libraries/cn/zh/documents/2023-01/23-22cmf255-volcano-engine-edge-cloud-sees-great-optimazation-in-four-tier-load-balancing-performance-with-hdslb-built-on-intel-hardware-and-software-case-study.pdf)
 * [Intel Dynamic Load Balancer Accelerating Elephant Flow](https://builders.intel.com/docs/networkbuilders/intel-dynamic-load-balancer-intel-dlb-accelerating-elephant-flow-technology-guide-1677672283.pdf)
-
+* [Chinese: vivo 与英特尔优化 HDSLB 方案，显著改善负载均衡系统性能](https://www.intel.cn/content/www/cn/zh/artificial-intelligence/optimize-hdslb-to-improve-load-balancing-systems.html)
 
 # License
 
