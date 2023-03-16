@@ -1,57 +1,20 @@
 # Contributing
 
-### License
+We are really glad you're reading this, because we need volunteer developers to enhance this open source project. Pls feel free to submit issues, bugfix or new features. We really appreciate any contributing work you made to the project.
 
-<PROJECT NAME> is licensed under the terms in [LICENSE]<link to license file in repo>. By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
+How to contribute the project? In general, we follow the "fork-and-pull" [Git workflow](https://nvie.com/posts/a-successful-git-branching-model/). Two main branches with infinite lifetime exist: **master** and **devel**. It is recommended that you should follow the workflow if you want to submit a patch to the project.
 
-### Sign your work
+* S1. **Fork** the repo on Github.
+* S2. **Clone** the project to your own machine.
+* S3. **Checkout** to `devel` branch of the project on your own machine.
+* S4. **Commit** changes on your own branch.
+* S5. **Push** your work back up to your fork.
+* S6. Submit a **Pull Request** so that we can review your changes.
 
-Please use the sign-off line at the end of the patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify
-the below (from [developercertificate.org](http://developercertificate.org/)):
+NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
-```
-Developer Certificate of Origin
-Version 1.1
+# Coding conventions
 
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-660 York Street, Suite 102,
-San Francisco, CA 94110 USA
+Basically, codeing style should be consistent in the whole project. We recommend to use the [Linux kernel coding style](https://www.kernel.org/doc/html/v4.10/process/coding-style.html#).
 
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
-
-Developer's Certificate of Origin 1.1
-
-By making a contribution to this project, I certify that:
-
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
-
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
-
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
-
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
-```
-
-Then you just add a line to every git commit message:
-
-    Signed-off-by: Joe Smith <joe.smith@email.com>
-
-Use your real name (sorry, no pseudonyms or anonymous contributions.)
-
-If you set your `user.name` and `user.email` git configs, you can sign your
-commit automatically with `git commit -s`.
+NOTE: As for indentations, we use 4-char indents, not 8-char indents. This is different from Linux kernel coding style.

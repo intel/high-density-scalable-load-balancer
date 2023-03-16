@@ -1,0 +1,193 @@
+diff --git a/drivers/net/i40e/i40e_rxtx.c b/drivers/net/i40e/i40e_rxtx.c
+index 0ae47b807..d7c2f719c 100644
+--- a/drivers/net/i40e/i40e_rxtx.c
++++ b/drivers/net/i40e/i40e_rxtx.c
+@@ -409,7 +409,7 @@ check_rx_burst_bulk_alloc_preconditions(__rte_unused struct i40e_rx_queue *rxq)
+ #error "PMD I40E: I40E_LOOK_AHEAD must be 8\n"
+ #endif
+ static inline int
+-i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
++i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq, uint8_t *ofb_id, uint8_t *ofb_data)
+ {
+ 	volatile union i40e_rx_desc *rxdp;
+ 	struct i40e_rx_entry *rxep;
+@@ -418,9 +418,10 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
+ 	uint64_t qword1;
+ 	uint32_t rx_status;
+ 	int32_t s[I40E_LOOK_AHEAD], nb_dd;
+-	int32_t i, j, nb_rx = 0;
++	int32_t i, j, k,nb_rx = 0;
+ 	uint64_t pkt_flags;
+ 	uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
++	int ofb_magic_flag = 1;
+ 
+ 	rxdp = &rxq->rx_ring[rxq->rx_tail];
+ 	rxep = &rxq->sw_ring[rxq->rx_tail];
+@@ -437,7 +438,7 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
+ 	 * Scan LOOK_AHEAD descriptors at a time to determine which
+ 	 * descriptors reference packets that are ready to be received.
+ 	 */
+-	for (i = 0; i < RTE_PMD_I40E_RX_MAX_BURST; i+=I40E_LOOK_AHEAD,
++	for (i = 0, k = 0; i < RTE_PMD_I40E_RX_MAX_BURST; i+=I40E_LOOK_AHEAD,
+ 			rxdp += I40E_LOOK_AHEAD, rxep += I40E_LOOK_AHEAD) {
+ 		/* Read desc statuses backwards to avoid race condition */
+ 		for (j = I40E_LOOK_AHEAD - 1; j >= 0; j--) {
+@@ -456,7 +457,7 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
+ 		nb_rx += nb_dd;
+ 
+ 		/* Translate descriptor info to mbuf parameters */
+-		for (j = 0; j < nb_dd; j++) {
++		for (j = 0; j < nb_dd; j++, k++) {
+ 			mb = rxep[j].mbuf;
+ 			qword1 = rte_le_to_cpu_64(\
+ 				rxdp[j].wb.qword1.status_error_len);
+@@ -475,8 +476,18 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
+ 			if (pkt_flags & PKT_RX_RSS_HASH)
+ 				mb->hash.rss = rte_le_to_cpu_32(\
+ 					rxdp[j].wb.qword0.hi_dword.rss);
+-			if (pkt_flags & PKT_RX_FDIR)
++			if (pkt_flags & PKT_RX_FDIR) {
+ 				pkt_flags |= i40e_rxd_build_fdir(&rxdp[j], mb);
++                if (ofb_data) {
++				    ofb_data[k] = rte_le_to_cpu_32(rxdp->wb.qword3.hi_dword.fd_id);
++				    if (ofb_magic_flag && ofb_data[k]) {
++                        if (ofb_id) {
++					        *ofb_id = ofb_data[k];
++                        }
++					    ofb_magic_flag = 0;
++				    }
++                }
++			}
+ 
+ #ifdef RTE_LIBRTE_IEEE1588
+ 			pkt_flags |= i40e_get_iee15888_flags(mb, qword1);
+@@ -569,7 +580,7 @@ i40e_rx_alloc_bufs(struct i40e_rx_queue *rxq)
+ }
+ 
+ static inline uint16_t
+-rx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
++rx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data)
+ {
+ 	struct i40e_rx_queue *rxq = (struct i40e_rx_queue *)rx_queue;
+ 	struct rte_eth_dev *dev;
+@@ -581,7 +592,7 @@ rx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
+ 	if (rxq->rx_nb_avail)
+ 		return i40e_rx_fill_from_stage(rxq, rx_pkts, nb_pkts);
+ 
+-	nb_rx = (uint16_t)i40e_rx_scan_hw_ring(rxq);
++	nb_rx = (uint16_t)i40e_rx_scan_hw_ring(rxq, ofb_id, ofb_data);
+ 	rxq->rx_next_avail = 0;
+ 	rxq->rx_nb_avail = nb_rx;
+ 	rxq->rx_tail = (uint16_t)(rxq->rx_tail + nb_rx);
+@@ -613,9 +624,9 @@ rx_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
+ }
+ 
+ static uint16_t
+-i40e_recv_pkts_bulk_alloc(void *rx_queue,
++__i40e_recv_pkts_bulk_alloc(void *rx_queue,
+ 			  struct rte_mbuf **rx_pkts,
+-			  uint16_t nb_pkts)
++			  uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data)
+ {
+ 	uint16_t nb_rx = 0, n, count;
+ 
+@@ -623,12 +634,13 @@ i40e_recv_pkts_bulk_alloc(void *rx_queue,
+ 		return 0;
+ 
+ 	if (likely(nb_pkts <= RTE_PMD_I40E_RX_MAX_BURST))
+-		return rx_recv_pkts(rx_queue, rx_pkts, nb_pkts);
++		return rx_recv_pkts(rx_queue, rx_pkts, nb_pkts, ofb_id, ofb_data);
+ 
+ 	while (nb_pkts) {
+ 		n = RTE_MIN(nb_pkts, RTE_PMD_I40E_RX_MAX_BURST);
+-		count = rx_recv_pkts(rx_queue, &rx_pkts[nb_rx], n);
++		count = rx_recv_pkts(rx_queue, &rx_pkts[nb_rx], n, ofb_id, ofb_data);
+ 		nb_rx = (uint16_t)(nb_rx + count);
++		ofb_data += count;
+ 		nb_pkts = (uint16_t)(nb_pkts - count);
+ 		if (count < n)
+ 			break;
+@@ -638,14 +650,31 @@ i40e_recv_pkts_bulk_alloc(void *rx_queue,
+ }
+ #else
+ static uint16_t
+-i40e_recv_pkts_bulk_alloc(void __rte_unused *rx_queue,
++__i40e_recv_pkts_bulk_alloc(void __rte_unused *rx_queue,
+ 			  struct rte_mbuf __rte_unused **rx_pkts,
+-			  uint16_t __rte_unused nb_pkts)
++			  uint16_t __rte_unused nb_pkts, uint8_t __rte_unused *ofb_id, uint8_t __rte_unused *ofb_data)
+ {
+ 	return 0;
+ }
+ #endif /* RTE_LIBRTE_I40E_RX_ALLOW_BULK_ALLOC */
+ 
++static uint16_t
++i40e_recv_pkts_bulk_alloc(void *rx_queue,
++                          struct rte_mbuf **rx_pkts,
++                          uint16_t nb_pkts)
++{
++    return __i40e_recv_pkts_bulk_alloc(rx_queue, rx_pkts, nb_pkts, NULL, NULL);
++}
++
++uint16_t
++i40e_pmd_recv_pkts_bulk_alloc(void *rx_queue,
++                          struct rte_mbuf **rx_pkts,
++                          uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data)
++{
++    return __i40e_recv_pkts_bulk_alloc(rx_queue, rx_pkts, nb_pkts, ofb_id, ofb_data);
++}
++
++
+ uint16_t
+ i40e_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
+ {
+diff --git a/drivers/net/i40e/i40e_rxtx.h b/drivers/net/i40e/i40e_rxtx.h
+index 2106bb355..13079fd50 100644
+--- a/drivers/net/i40e/i40e_rxtx.h
++++ b/drivers/net/i40e/i40e_rxtx.h
+@@ -192,6 +192,9 @@ int i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
+ 			    const struct rte_eth_txconf *tx_conf);
+ void i40e_dev_rx_queue_release(void *rxq);
+ void i40e_dev_tx_queue_release(void *txq);
++uint16_t i40e_pmd_recv_pkts_bulk_alloc(void *rx_queue,
++                          struct rte_mbuf **rx_pkts,
++                          uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data);
+ uint16_t i40e_recv_pkts(void *rx_queue,
+ 			struct rte_mbuf **rx_pkts,
+ 			uint16_t nb_pkts);
+diff --git a/drivers/net/i40e/rte_pmd_i40e.c b/drivers/net/i40e/rte_pmd_i40e.c
+index fdcb1a43e..6de9b9a5f 100644
+--- a/drivers/net/i40e/rte_pmd_i40e.c
++++ b/drivers/net/i40e/rte_pmd_i40e.c
+@@ -3228,3 +3228,17 @@ rte_pmd_i40e_set_switch_dev(uint16_t port_id, struct rte_eth_dev *switch_dev)
+ 
+ 	return 0;
+ }
++
++uint16_t
++rte_pmd_i40e_recv_pkts_bulk_alloc(uint16_t port_id, uint16_t queue_id,
++			  struct rte_mbuf **rx_pkts, uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data)
++{
++    struct rte_eth_dev *i40e_dev;
++
++    i40e_dev = &rte_eth_devices[port_id];
++
++    if (likely(i40e_dev))
++        return i40e_pmd_recv_pkts_bulk_alloc(i40e_dev->data->rx_queues[queue_id], rx_pkts, nb_pkts, ofb_id, ofb_data);
++
++    return 0;
++}
+diff --git a/drivers/net/i40e/rte_pmd_i40e.h b/drivers/net/i40e/rte_pmd_i40e.h
+index 915cdf076..762ff36c8 100644
+--- a/drivers/net/i40e/rte_pmd_i40e.h
++++ b/drivers/net/i40e/rte_pmd_i40e.h
+@@ -1079,4 +1079,9 @@ __rte_experimental
+ int
+ rte_pmd_i40e_set_switch_dev(uint16_t port_id, struct rte_eth_dev *switch_dev);
+ 
++uint16_t
++rte_pmd_i40e_recv_pkts_bulk_alloc(uint16_t port_id,
++              uint16_t queue_id, struct rte_mbuf **rx_pkts,
++			  uint16_t nb_pkts, uint8_t *ofb_id, uint8_t *ofb_data);
++
+ #endif /* _PMD_I40E_H_ */

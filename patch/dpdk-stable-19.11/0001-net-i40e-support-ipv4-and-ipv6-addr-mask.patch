@@ -1,0 +1,153 @@
+diff --git a/drivers/net/i40e/i40e_flow.c b/drivers/net/i40e/i40e_flow.c
+index 61021037c..4f540e066 100644
+--- a/drivers/net/i40e/i40e_flow.c
++++ b/drivers/net/i40e/i40e_flow.c
+@@ -2321,11 +2321,11 @@ i40e_flow_set_fdir_flex_msk(struct i40e_pf *pf,
+ static int
+ i40e_flow_set_fdir_inset(struct i40e_pf *pf,
+ 			 enum i40e_filter_pctype pctype,
+-			 uint64_t input_set)
++			 uint64_t input_set,
++			 uint32_t mask_reg[I40E_INSET_MASK_NUM_REG])
+ {
+ 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
+ 	uint64_t inset_reg = 0;
+-	uint32_t mask_reg[I40E_INSET_MASK_NUM_REG] = {0};
+ 	int i, num;
+ 
+ 	/* Check if the input set is valid */
+@@ -2344,10 +2344,14 @@ i40e_flow_set_fdir_inset(struct i40e_pf *pf,
+ 	    !memcmp(&pf->fdir.input_set[pctype], &input_set, sizeof(uint64_t)))
+ 		return 0;
+ 
+-	num = i40e_generate_inset_mask_reg(input_set, mask_reg,
++	if (mask_reg[0] == 0) {
++		num = i40e_generate_inset_mask_reg(input_set, mask_reg,
+ 					   I40E_INSET_MASK_NUM_REG);
+-	if (num < 0)
+-		return -EINVAL;
++		if (num < 0)
++			return -EINVAL;
++	} else {
++		num = I40E_INSET_MASK_NUM_REG;
++	}
+ 
+ 	if (pf->support_multi_driver) {
+ 		for (i = 0; i < num; i++)
+@@ -2486,6 +2490,7 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 	uint16_t outer_tpid;
+ 	uint16_t ether_type;
+ 	uint32_t vtc_flow_cpu;
++	uint32_t mask_reg[I40E_INSET_MASK_NUM_REG] = {0};
+ 	bool outer_ip = true;
+ 	int ret;
+ 
+@@ -2612,6 +2617,8 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 			layer_idx = I40E_FLXPLD_L3_IDX;
+ 
+ 			if (ipv4_spec && ipv4_mask && outer_ip) {
++				uint32_t dst_ip;
++
+ 				/* Check IPv4 mask and update input set */
+ 				if (ipv4_mask->hdr.version_ihl ||
+ 				    ipv4_mask->hdr.total_length ||
+@@ -2625,10 +2632,22 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 					return -rte_errno;
+ 				}
+ 
++				dst_ip = ipv4_spec->hdr.dst_addr;
++
+ 				if (ipv4_mask->hdr.src_addr == UINT32_MAX)
+ 					input_set |= I40E_INSET_IPV4_SRC;
+-				if (ipv4_mask->hdr.dst_addr == UINT32_MAX)
++				if (ipv4_mask->hdr.dst_addr) {
++					uint32_t mask;
++
+ 					input_set |= I40E_INSET_IPV4_DST;
++					mask = ipv4_mask->hdr.dst_addr;
++					dst_ip &= mask;
++					mask = rte_cpu_to_be_32(~mask);
++					mask_reg[0] = (0x1c << 16) |
++						      (mask & 0xffff);
++					mask_reg[1] = (0x1b << 16) |
++						      (mask >> 16);
++				}
+ 				if (ipv4_mask->hdr.type_of_service == UINT8_MAX)
+ 					input_set |= I40E_INSET_IPV4_TOS;
+ 				if (ipv4_mask->hdr.time_to_live == UINT8_MAX)
+@@ -2653,7 +2672,7 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 				filter->input.flow.ip4_flow.src_ip =
+ 					ipv4_spec->hdr.src_addr;
+ 				filter->input.flow.ip4_flow.dst_ip =
+-					ipv4_spec->hdr.dst_addr;
++					dst_ip;
+ 			} else if (!ipv4_spec && !ipv4_mask && !outer_ip) {
+ 				filter->input.flow_ext.inner_ip = true;
+ 				filter->input.flow_ext.iip_type =
+@@ -2678,6 +2697,8 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 			layer_idx = I40E_FLXPLD_L3_IDX;
+ 
+ 			if (ipv6_spec && ipv6_mask && outer_ip) {
++				uint32_t *dst_ip, *src_ip;
++
+ 				/* Check IPv6 mask and update input set */
+ 				if (ipv6_mask->hdr.payload_len) {
+ 					rte_flow_error_set(error, EINVAL,
+@@ -2687,14 +2708,34 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 					return -rte_errno;
+ 				}
+ 
++				dst_ip = filter->input.flow.ipv6_flow.dst_ip;
++				src_ip = filter->input.flow.ipv6_flow.src_ip;
++				rte_memcpy(dst_ip, ipv6_spec->hdr.dst_addr, 16);
++				rte_memcpy(src_ip, ipv6_spec->hdr.src_addr, 16);
++
+ 				if (!memcmp(ipv6_mask->hdr.src_addr,
+ 					    ipv6_addr_mask,
+-					    RTE_DIM(ipv6_mask->hdr.src_addr)))
++					    sizeof(ipv6_mask->hdr.src_addr)))
+ 					input_set |= I40E_INSET_IPV6_SRC;
+ 				if (!memcmp(ipv6_mask->hdr.dst_addr,
+ 					    ipv6_addr_mask,
+-					    RTE_DIM(ipv6_mask->hdr.dst_addr)))
++					    sizeof(ipv6_mask->hdr.dst_addr) -
++					    sizeof(uint32_t))) {
++					const uint8_t *mask_addr;
++					uint32_t mask;
++
+ 					input_set |= I40E_INSET_IPV6_DST;
++					mask_addr = ipv6_mask->hdr.dst_addr +
++						sizeof(ipv6_mask->hdr.dst_addr) -
++						sizeof(uint32_t);
++					mask = *(const uint32_t *)mask_addr;
++					dst_ip[3] &= mask;
++					mask = rte_cpu_to_be_32(~mask);
++					mask_reg[0] = (0x1c << 16) |
++						      (mask & 0xffff);
++					mask_reg[1] = (0x1b << 16) |
++						      (mask >> 16);
++				}
+ 
+ 				if ((ipv6_mask->hdr.vtc_flow &
+ 				     rte_cpu_to_be_32(I40E_IPV6_TC_MASK))
+@@ -2716,11 +2757,6 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 				filter->input.flow.ipv6_flow.hop_limits =
+ 					ipv6_spec->hdr.hop_limits;
+ 
+-				rte_memcpy(filter->input.flow.ipv6_flow.src_ip,
+-					   ipv6_spec->hdr.src_addr, 16);
+-				rte_memcpy(filter->input.flow.ipv6_flow.dst_ip,
+-					   ipv6_spec->hdr.dst_addr, 16);
+-
+ 				/* Check if it is fragment. */
+ 				if (ipv6_spec->hdr.proto ==
+ 				    I40E_IPV6_FRAG_HEADER)
+@@ -3031,7 +3067,7 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
+ 
+ 	/* If customized pctype is not used, set fdir configuration.*/
+ 	if (!filter->input.flow_ext.customized_pctype) {
+-		ret = i40e_flow_set_fdir_inset(pf, pctype, input_set);
++		ret = i40e_flow_set_fdir_inset(pf, pctype, input_set, mask_reg);
+ 		if (ret == -1) {
+ 			rte_flow_error_set(error, EINVAL,
+ 					   RTE_FLOW_ERROR_TYPE_ITEM, item,
