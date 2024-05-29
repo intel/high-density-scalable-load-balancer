@@ -21,7 +21,7 @@ Rough Performance data on recent Intel's Xeon CPU (e.g. 3rd & 4th generation) an
 
 ### Manuals
 
-* [Quick Start Guide](./doc/Quick_start.md)
+* [Quick Start](./doc/Quick_start.md)
 
 ### Whitepaper
 
