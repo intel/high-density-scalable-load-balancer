@@ -8,20 +8,21 @@ $ cd hdslb
 ```
 
 ## DPDK setup.
+## Checked on the server ubuntu 22.04.
+`dpdk-21.11.7` is used for `HDSLB`.
 
-`dpdk-20.08` is used for `HDSLB`.
 
 ```bash
-$ wget http://fast.dpdk.org/rel/dpdk-20.08.tar.xz
-$ tar vxf dpdk-20.08.tar.xz
+$ wget http://fast.dpdk.org/rel/dpdk-21.11.7.tar.xz
+$ tar vxf dpdk-21.11.7.tar.xz
 ```
 
 Apply patchs for DPDK.
 
 ```
 $ cd <path-of-hdslb>
-$ cp patch/dpdk-20.08/*.patch dpdk-20.08/
-$ cd dpdk-20.08/
+$ cp patch/dpdk-21.11.7/*.patch dpdk-21.11.7/
+$ cd dpdk-21.11.7/
 $ patch -p 1 < 0002-support-large_memory.patch
 $ patch -p 1 < 0003-net-i40e-ice-support-rx-markid-ofb.patch
 ```
@@ -31,7 +32,7 @@ $ patch -p 1 < 0003-net-i40e-ice-support-rx-markid-ofb.patch
 Now build DPDK and set env variable `RTE_SDK` for HDSLB.
 
 ```bash
-$ cd dpdk-20.08/
+$ cd dpdk-21.11.7/
 $ make config T=x86_64-native-linuxapp-gcc MAKE_PAUSE=n
 $ make MAKE_PAUSE=n
 $ export RTE_SDK=$PWD
@@ -52,7 +53,7 @@ Install kernel modules 'rte_kni' and bind NIC to `vfio-pci` driver.
 
 ```bash
 $ modprobe vfio-pci
-$ cd dpdk-20.08
+$ cd dpdk-21.11.7
 
 $ insmod build/kmod/rte_kni.ko
 
@@ -65,7 +66,7 @@ $ ./usertools/dpdk-devbind.py -b vfio-pci 0000:18:00.0 0000:1a:00.0
 ## Build HDSLB
 
 ```bash
-$ cd dpdk-20.08/
+$ cd dpdk-21.11.7/
 $ export RTE_SDK=$PWD
 $ cd <path-of-hdslb>
 $ make
