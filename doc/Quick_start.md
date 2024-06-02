@@ -13,6 +13,7 @@ $ cd hdslb
 
 
 ```bash
+Notes: the download package may named 'dpdk-stable-21.11.7.tar.xz';
 $ wget http://fast.dpdk.org/rel/dpdk-21.11.7.tar.xz
 $ tar vxf dpdk-21.11.7.tar.xz
 ```
