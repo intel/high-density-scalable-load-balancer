@@ -32,6 +32,7 @@ $ patch -p 1 < 0003-net-i40e-ice-support-rx-markid-ofb.patch
 
 Now build DPDK and set env variable `RTE_SDK` for HDSLB.
 
+Notes: Update menson to build DPDK;
 ```bash
 $ cd dpdk-21.11.7/
 $ make config T=x86_64-native-linuxapp-gcc MAKE_PAUSE=n
