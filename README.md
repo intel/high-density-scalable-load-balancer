@@ -31,6 +31,10 @@ Rough Performance data on recent Intel's Xeon CPU (e.g. 3rd & 4th generation) an
 * [Chinese: vivo 与英特尔优化 HDSLB 方案，显著改善负载均衡系统性能](https://www.intel.cn/content/www/cn/zh/artificial-intelligence/optimize-hdslb-to-improve-load-balancing-systems.html)
 * [Chinese: 是德科技与英特尔携手完成负载均衡单节点2100万连接新建性能测试](https://mp.weixin.qq.com/s/9eLTNXKmYitIFmf2PpTUGQ)
 
+### Community Article
+
+* [Chinese: Intel HDSLB 高性能四层负载均衡器 — 快速入门和应用场景](https://blog.csdn.net/Jmilk/article/details/138751619)
+
 # License
 
 HDSLB is based on GPL-2.0.
