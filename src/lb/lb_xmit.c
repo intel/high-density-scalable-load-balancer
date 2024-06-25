@@ -303,6 +303,7 @@ void lb_dest_fnat_xmit4_in(void *inconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&dest->in_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&dest->in_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -349,6 +350,7 @@ void lb_dest_fnat_xmit4_out(void *outconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&conn->out_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&conn->out_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -394,6 +396,7 @@ void lb_dest_fnat_xmit6_in(void *inconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&dest->in_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&dest->in_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
@@ -439,6 +442,7 @@ void lb_dest_fnat_xmit6_out(void *outconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&conn->out_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&conn->out_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
@@ -490,6 +494,7 @@ void lb_dest_fnat_xmit64_in(void *inconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&dest->in_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&dest->in_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -540,6 +545,7 @@ void lb_dest_fnat_xmit46_out(void *outconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&conn->out_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&conn->out_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
@@ -585,6 +591,7 @@ void lb_dest_nat_xmit4_in(void *inconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&dest->in_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&dest->in_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -630,6 +637,7 @@ void lb_dest_nat_xmit4_out(void *outconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&conn->out_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&conn->out_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
@@ -680,6 +688,7 @@ void lb_dest_nat_xmit6_in(void *inconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&dest->in_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&dest->in_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
@@ -730,6 +739,7 @@ void lb_dest_nat_xmit6_out(void *outconn, struct rte_mbuf *mbuf,
     if (!eth_hdr) {
         goto error;
     }
+
     rte_ether_addr_copy(&conn->out_dmac, &eth_hdr->d_addr);
     rte_ether_addr_copy(&conn->out_smac, &eth_hdr->s_addr);
     eth_hdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
