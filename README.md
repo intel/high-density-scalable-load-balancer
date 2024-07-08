@@ -17,8 +17,8 @@ Rough Performance data on recent Intel's Xeon CPU (e.g. 3rd & 4th generation) an
 * TCP Session Est. Rate > 800K / Core
 * Linear growth
 
-![forward-pps.png](./pic/forward-pps.png)
-![icx-cps.png](./pic/icx-cps.png)
+![forward-pps.png](./doc/pics/forward-pps.png)
+![icx-cps.png](./doc/pics/icx-cps.png)
 
 ## Resource
 
