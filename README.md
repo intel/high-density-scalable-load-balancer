@@ -38,6 +38,7 @@ Rough Performance data on recent Intel's Xeon CPU (e.g. 3rd & 4th generation) an
 
 * [Chinese: Intel HDSLB 高性能四层负载均衡器 — 快速入门和应用场景](https://blog.csdn.net/Jmilk/article/details/138751619)
 * [Chinese: Intel HDSLB 高性能四层负载均衡器 — 基本原理和部署配置](https://blog.csdn.net/Jmilk/article/details/138752089)
+* [Chinese: Intel HDSLB 高性能四层负载均衡器 — 代码剖析和高级特性](https://blog.csdn.net/Jmilk/article/details/138752116)
 
 # License
 
